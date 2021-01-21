@@ -571,3 +571,93 @@ public class DemoClientApplication {
 	}
 }
 ```
+
+### Backing services on Kubernetes
+
+On Kubernetes, you need to to configure the URL where Demo Client can find Demo Service. Spring Boot can leverage the native Kubernetes capabilities in terms of service discovery and load balancing, so you just need to set the property to the Kubernetes service URL.
+
+First, create a Deployment resource like you did for Demo Service. In this case, let's use an environment variable to pass configuration data to Spring Boot. The DEMO_SERVICE_URL property needs to be set to http://demo-service, the name of the Service object exposing the Demo Service application to the cluster network. 
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-client-deployment
+  labels:
+    app: demo-client
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: demo-client
+  template:
+    metadata:
+      labels:
+        app: demo-client
+    spec:
+      containers:
+        - name: demo-client
+          image: thomasvitale/demo-client:0.0.1-SNAPSHOT
+          ports:
+            - containerPort: 8181
+          env:
+            - name: DEMO_SERVICE_URL
+              value: http://demo-service
+          lifecycle:
+            preStop:
+              exec:
+                command: [ "sh", "-c", "sleep 10" ]
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8181
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8181
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          volumeMounts:
+            - name: client-config-volume
+              mountPath: /workspace/config
+      volumes:
+        - name: client-config-volume
+          configMap:
+            name: demo-client-config
+```
+
+Then, just like before a Service and ConfigMap objects for Demo Client.
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-client-service
+  labels:
+    app: demo-client
+spec:
+  type: ClusterIP
+  selector:
+    app: demo-client
+  ports:
+    - port: 8181
+      targetPort: 8181
+```
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-client-config
+data:
+  application.yml: |
+    server:
+      shutdown: graceful
+    spring:
+      lifecycle:
+        timeout-per-shutdown-phase: 20s
+```
+
+Now run both the applications on Kubernetes and verify they work correctly.
