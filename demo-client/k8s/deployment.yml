@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-client-deployment
+  labels:
+    app: demo-client
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: demo-client
+  template:
+    metadata:
+      labels:
+        app: demo-client
+    spec:
+      containers:
+        - name: demo-client
+          image: thomasvitale/demo-client:0.0.1-SNAPSHOT
+          ports:
+            - containerPort: 8181
+          env:
+            - name: DEMO_SERVICE_URL
+              value: http://demo-service
+          lifecycle:
+            preStop:
+              exec:
+                command: [ "sh", "-c", "sleep 10" ]
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8181
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8181
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          volumeMounts:
+            - name: client-config-volume
+              mountPath: /workspace/config
+      volumes:
+        - name: client-config-volume
+          configMap:
+            name: demo-client-config

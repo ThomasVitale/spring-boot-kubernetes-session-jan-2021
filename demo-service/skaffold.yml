@@ -1,0 +1,20 @@
+apiVersion: skaffold/v2beta8
+kind: Config
+metadata:
+  name: demo-service
+build:
+  artifacts:
+    - image: thomasvitale/demo-service
+      custom:
+      buildpacks:
+        builder: gcr.io/paketo-buildpacks/builder:base-platform-api-0.3
+        env:
+          - BP_JVM_VERSION=11.*
+        dependencies:
+          paths:
+            - src
+            - build.gradle
+deploy:
+  kubectl:
+    manifests:
+      - k8s/*

@@ -1,0 +1,9 @@
+version: "3.8"
+services:
+  demo-service:
+    image: thomasvitale/demo-service:0.0.1-SNAPSHOT
+    container_name: demo-service
+    ports:
+      - 8080:8080
+    environment:
+      - DEMO_MESSAGE=Welcome to Spring Boot on Docker!

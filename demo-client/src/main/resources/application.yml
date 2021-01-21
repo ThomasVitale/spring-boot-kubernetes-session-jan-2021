@@ -1,0 +1,5 @@
+demo:
+  serviceUrl: http://localhost:8080
+
+server:
+  port: 8181
